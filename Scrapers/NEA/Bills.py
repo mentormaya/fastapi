@@ -7,8 +7,9 @@ import json
 import datetime
 import itertools
 from time import sleep
-from requests import Request, Session
+from pprint import pprint
 from bs4 import BeautifulSoup
+from requests import Request, Session
 
 class ScraperNEA:
     
@@ -80,7 +81,7 @@ class ScraperNEA:
             data[header] = rowSoup[index].string
         return data
 
-    def parseBill(self, html_text):
+    def parseBill(self, html_text, trans = False):
         billData = {}
         billSoup = BeautifulSoup(html_text, 'html.parser')
         table_rows = billSoup.table.find_all('tr')
@@ -102,11 +103,12 @@ class ScraperNEA:
         bill_headers = []
         for bill_header in bill_headers_soup:
             bill_headers.append(bill_header.string)
-        billData['bill_headers'] = bill_headers
         transactions = []
         for transaction_soup in itertools.islice(table_rows , 10, len(table_rows)):
             transactions.append(self.parseRow(transaction_soup, bill_headers))
-        billData['transactions'] = transactions
+        if trans:
+            billData['bill_headers'] = bill_headers
+            billData['transactions'] = transactions
         billData['records'] = len(transactions)
         billData['status'] = transactions[-1]['STATUS']
         billData['bill_amount'] = transactions[-1]['BILL AMT']
@@ -116,7 +118,7 @@ class ScraperNEA:
         billData['payable_amount'] = transactions[-1]['PAYABLE AMOUNT ']
         return billData
 
-    def getBills(self):
+    def getBills(self, transactions = False):
         #init Date and Session Variables
         self.initDateAndSession()
 
@@ -131,7 +133,40 @@ class ScraperNEA:
         bills = []
         for meter in self.meters:
             result = self.session.post(self.result_url, headers=self.headers, data=meter)
-            bill = self.parseBill(result.text)
+            bill = self.parseBill(result.text, trans = transactions)
             bills.append(bill)
 
         return bills
+    
+    def getBill(self, meter, transactions = False):
+        #init Date and Session Variables
+        self.initDateAndSession()
+
+        #getting home page and extracting locations
+        home = self.session.get(self.home_url, headers = self.headers)
+
+        locations = self.parseLocations(home.text)
+
+        #getting bills info for each meter
+        bill = []
+        if meter == "domestic":
+            meter_data = self.domestic_meter
+        else:
+            meter_data = self.agri_meter
+        result = self.session.post(self.result_url, headers=self.headers, data=meter_data)
+        bill = self.parseBill(result.text, trans = transactions)
+        return bill
+
+    def getBillOf(self, meter, transctions = False):
+        #init Date and Session Variables
+        self.initDateAndSession()
+
+        #getting home page and extracting locations
+        home = self.session.get(self.home_url, headers = self.headers)
+
+        locations = self.parseLocations(home.text)
+
+        #getting bills info for each meter
+        result = self.session.post(self.result_url, headers=self.headers, data=meter)
+        bill = self.parseBill(result.text, trans = transctions)
+        return bill
