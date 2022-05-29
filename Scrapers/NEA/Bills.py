@@ -98,10 +98,12 @@ class ScraperNEA:
         #extract unpaid transactions if any
         unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
 
-        total_unpaid = unpaid[-1]
-        total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
-
-        return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
+        if unpaid:
+            total_unpaid = unpaid[-1]
+            total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+            return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
+            
+        return {"advance": advance, "unpaid": unpaid, "total_unpaid": 0}
 
     def parseBill(self, html_text, trans = False):
         billData = {}
