@@ -81,12 +81,34 @@ class ScraperNEA:
             data[header] = rowSoup[index].string
         return data
 
+    def parseFromTo(self, from_to):
+        dates = re.findall(r'\b\d{2}[-\./]\d{2}[-\./]\d{2}\b|\b\d{4}[-\./]\d{2}[-\./]\d{2}\b|\b\d{2}[-\./]\d{2}[-\./]\d{4}\b',from_to)
+        dates = [datetime.datetime.strptime(date, "%m/%d/%Y").strftime("%d %b %Y") for date in dates]
+        return {"from": dates[0], "to": dates[1]}
+
+    def parseBillData(self, tranSoup):
+        # Filter out the paid transactions
+        tranSoup = [tran for tran in tranSoup if tran["STATUS"] != "PAID"]
+
+        #extract advance paid amount if any
+        advance = [tran for tran in tranSoup if tran["STATUS"] == "PAY ADVANCE"]
+        advance[-1]["STATUS"] = advance[0]["DUE BILL OF"]
+        advance = advance[-1]
+
+        #extract unpaid transactions if any
+        unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
+
+        total_unpaid = unpaid[-1]
+        total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+
+        return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
+
     def parseBill(self, html_text, trans = False):
         billData = {}
         billSoup = BeautifulSoup(html_text, 'html.parser')
         table_rows = billSoup.table.find_all('tr')
         from_to = table_rows[1].find('th').string
-        billData['from_to'] = from_to
+        billData['from_to'] = self.parseFromTo(from_to)
         billData['records'] = table_rows[4].text.strip('\n')
         if billData['records'] == "No Records Found.":
             billData['records'] = 0
@@ -110,12 +132,10 @@ class ScraperNEA:
             billData['bill_headers'] = bill_headers
             billData['transactions'] = transactions
         billData['records'] = len(transactions)
-        billData['status'] = transactions[-1]['STATUS']
-        billData['bill_amount'] = transactions[-1]['BILL AMT']
-        billData['paid_up_to'] = transactions[-2]['DUE BILL OF']
-        billData['balance_status'] = transactions[-3]['DUE BILL OF']
-        billData['last_transaction_date'] = transactions[-3]['BILL DATE']
-        billData['payable_amount'] = transactions[-1]['PAYABLE AMOUNT ']
+        bill_status = self.parseBillData(transactions)
+        billData['advance'] = bill_status['advance']
+        billData['unpaid'] = bill_status['unpaid']
+        billData['total_unpaid'] = bill_status['total_unpaid']
         return billData
 
     def getBills(self, transactions = False):
