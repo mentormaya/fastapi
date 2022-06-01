@@ -87,24 +87,33 @@ class ScraperNEA:
         return {"from": dates[0], "to": dates[1]}
 
     def parseBillData(self, tranSoup):
+        if not tranSoup:
+            pprint(tranSoup)
+            return { "message": "No Transactions Detected!"}
         # Filter out the paid transactions
         tranSoup = [tran for tran in tranSoup if tran["STATUS"] != "PAID"]
 
+        if not tranSoup:
+            pprint(tranSoup)
+
         #extract advance paid amount if any
         advance = [tran for tran in tranSoup if tran["STATUS"] == "PAY ADVANCE"]
-        advance[-1]["STATUS"] = advance[0]["DUE BILL OF"]
-        advance = advance[-1]
+        if advance:
+            pprint(advance)
+            advance[-1]["STATUS"] = advance[0]["DUE BILL OF"]
+            advance = advance[-1]
 
-        #extract unpaid transactions if any
-        unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
+            #extract unpaid transactions if any
+            unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
 
-        if unpaid:
-            total_unpaid = unpaid[-1]
-            total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
-            return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
-            
-        return {"advance": advance, "unpaid": unpaid, "total_unpaid": 0}
-
+            if unpaid:
+                total_unpaid = unpaid[-1]
+                total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+                return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
+                
+            return {"advance": advance, "unpaid": unpaid, "total_unpaid": 0}
+        else:
+            return {"advance": 0, "unpaid": 0, "total_unpaid": 0, "message": "Data not Found!"}
     def parseBill(self, html_text, trans = False):
         billData = {}
         billSoup = BeautifulSoup(html_text, 'html.parser')
