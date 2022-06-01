@@ -89,7 +89,7 @@ class ScraperNEA:
     def parseBillData(self, tranSoup):
         if not tranSoup:
             pprint(tranSoup)
-            return { "message": "No Transactions Detected!"}
+            return {"advance": 0, "unpaid": 0, "total_unpaid": 0, "message": "No transactions Found!"}
         # Filter out the paid transactions
         tranSoup = [tran for tran in tranSoup if tran["STATUS"] != "PAID"]
 
