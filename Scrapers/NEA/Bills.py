@@ -10,6 +10,34 @@ from time import sleep
 from pprint import pprint
 from bs4 import BeautifulSoup
 from requests import Request, Session
+from pydantic import BaseModel
+from typing import Dict, Optional
+
+
+#some state templates
+UNPAID_MSG = "नेपाली रुपैंया {} तिर्न बांकी"
+ADVANCE_MSG = "नेपाली रुपैंया {} बढी तिरेकाे"
+UNPAID_ADVANCE_MSG = "नेपाली रुपैंया {} तिर्न बांकी र {} पुरानाे बढी तिरेकाे"
+PAID_MSG = "सबै बिलकाे भुक्तानी भइसकेकाे छ!"
+NO_TRANSACTION_MSG = "कुनै बिल तथा काराेबार पाइएन!"
+
+#Data type definition for bill data
+class Bill(BaseModel):
+    name: str = "NEA Bill"
+    description: Optional[str]
+    raw_data: dict
+    state: str = "UNKNOWN"
+    status: Optional[str]
+    consumer_name: Optional[str]
+    sc_no: Optional[str]
+    counter: Optional[str]
+    consumer_id: Optional[int]
+    bill_from: Optional[str]
+    bill_to: Optional[str]
+    paid_up_to: Optional[str]
+    advance: Optional[float]
+    unpaid: Optional[float]
+    records: Optional[int]
 
 class ScraperNEA:
     
@@ -22,10 +50,14 @@ class ScraperNEA:
         self.result_url = "https://www.neabilling.com/viewonline/viewonlineresult/"
 
     #calculate date function
-    def dateCalculator(self):
+    def dateCalculator(self, range = 'fiscalYear'):
         dt = datetime.datetime.now()
+        if range == 'fiscalYear':
+            range_from = '02/01/2022'
+        else:
+            range_from = (dt - datetime.timedelta(days=90)).strftime("%m/%d/%Y")
         return {
-            "from": (dt - datetime.timedelta(days=90)).strftime("%m/%d/%Y"),
+            "from": range_from,
             "to": dt.strftime("%m/%d/%Y")
         }
 
@@ -36,19 +68,41 @@ class ScraperNEA:
         self.dt = self.dateCalculator()
 
         self.domestic_meter = {
+            "name": "Home NEA Bill",
             "NEA_Location": "334",
             "sc_no": "018.03.036",
             "consumer_id": "784",
             "Fromdatepicker": self.dt['from'],
             "Todatepicker": self.dt['to']
         }
+
         self.agri_meter = {
+            "name": "Agriculture NEA Bill",
             "NEA_Location": "334",
             "sc_no": "018.03.206",
             "consumer_id": "753",
             "Fromdatepicker": self.dt['from'],
             "Todatepicker": self.dt['to']
         }
+
+        self.amita_meter = {
+            "name": "Amita NEA Bill",
+            "NEA_Location": "334",
+            "sc_no": "006.09.47KH",
+            "consumer_id": "501003293",
+            "Fromdatepicker": self.dt['from'],
+            "Todatepicker": self.dt['to']
+        }
+
+        self.puja_meter = {
+            "name": "Puja NEA Bill",
+            "NEA_Location": "334",
+            "sc_no": "003.01.142KH",
+            "consumer_id": "501005114",
+            "Fromdatepicker": self.dt['from'],
+            "Todatepicker": self.dt['to']
+        }
+
         self.meters = [self.domestic_meter, self.agri_meter]
 
 
@@ -89,41 +143,110 @@ class ScraperNEA:
     def parseBillData(self, tranSoup):
         if not tranSoup:
             pprint(tranSoup)
-            return {"advance": 0, "unpaid": 0, "total_unpaid": 0, "message": "No transactions Found!"}
+            return { "result": False, "message": "No transactions Found!"}
         # Filter out the paid transactions
-        tranSoup = [tran for tran in tranSoup if tran["STATUS"] != "PAID"]
+        paid = [tran for tran in tranSoup if tran['STATUS'] == 'PAID']
 
-        if not tranSoup:
-            pprint(tranSoup)
+        if paid:
+            paid_up_to = paid[-2]["DUE BILL OF"]
+
+        # pprint(paid_up_to)
 
         #extract advance paid amount if any
         advance = [tran for tran in tranSoup if tran["STATUS"] == "PAY ADVANCE"]
+        total_advance = 0
         if advance:
-            pprint(advance)
+            # pprint(advance)
             advance[-1]["STATUS"] = advance[0]["DUE BILL OF"]
             advance = advance[-1]
+            total_advance = advance['BILL AMT']
+            # return {"advance": advance, "unpaid": unpaid, "total_unpaid": 0}
 
-            #extract unpaid transactions if any
-            unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
-
-            if unpaid:
-                total_unpaid = unpaid[-1]
-                total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
-                return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
-                
-            return {"advance": advance, "unpaid": unpaid, "total_unpaid": 0}
+        #extract unpaid transactions if any
+        unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
+        total_unpaid = 0
+        if unpaid:
+            total_unpaid = unpaid[-1]['PAYABLE AMOUNT ']
+            total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+            # return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
+        
+        return { 
+            "advance": advance, 
+            "unpaid": unpaid, 
+            "total_unpaid": total_unpaid, 
+            "paid": paid, 
+            "total_advance": total_advance, 
+            "paid_up_to": paid_up_to 
+        }
+    
+    def parseState(self, unpaid = 0, advance = 0):
+        res = ''
+        unpaid = abs(float(unpaid))
+        advance = abs(float(advance))
+        # pprint(advance)
+        if unpaid > 0:
+            if advance > 0:
+                res = UNPAID_ADVANCE_MSG.format(unpaid, advance)
+            else:
+                res = UNPAID_MSG.format(unpaid)
         else:
-            return {"advance": 0, "unpaid": 0, "total_unpaid": 0, "message": "Data not Found!"}
-    def parseBill(self, html_text, trans = False):
+            if advance > 0:
+                res = ADVANCE_MSG.format(advance)
+            else:
+                res = PAID_MSG
+        # pprint(res)
+        return res
+
+    def formatBill(self, billData):
+        if billData['records'] > 0:
+            bill = Bill(
+                name = billData['name'],
+                # description = None,
+                raw_data = billData,
+                state = self.parseState(advance = billData['total_advance'], unpaid = billData['total_unpaid']),
+                status = "UNPAID" if len(billData['unpaid']) > 0 else "ADVANCE" if len(billData['advance']) > 0 else "No Bills No Advance",
+                consumer_name = billData['consumer_detail']['customer_name'],
+                sc_no = billData['consumer_detail']['sc_no'],
+                counter = billData['consumer_detail']['counter'],
+                consumer_id = int(billData['consumer_detail']['consumer_id']),
+                bill_from = billData['from'],
+                bill_to = billData['to'],
+                paid_up_to = billData['paid_up_to'],
+                advance = billData['total_advance'],
+                unpaid = billData['total_unpaid'],
+                records = billData['records']
+            )
+        else:
+            bill = Bill(
+                name = billData['name'],
+                # description = None,
+                raw_data = billData,
+                state = NO_TRANSACTION_MSG,
+                status = "NO TRANSACTIONS FOUND!",
+                bill_from = billData['from'],
+                bill_to = billData['to'],
+                records = billData['records']
+                # consumer_name = billData['consumer_detail']['customer_name'],
+                # sc_no = billData['consumer_detail']['sc_no'],
+                # counter = billData['consumer_detail']['counter'],
+                # consumer_id = int(billData['consumer_detail']['consumer_id'])
+            )
+
+        return bill
+
+    def parseBill(self, html_text, trans = False, name = "NEA Bill"):
         billData = {}
         billSoup = BeautifulSoup(html_text, 'html.parser')
         table_rows = billSoup.table.find_all('tr')
         from_to = table_rows[1].find('th').string
-        billData['from_to'] = self.parseFromTo(from_to)
+        from_to = self.parseFromTo(from_to)
+        billData['name'] = name
+        billData['from'] = from_to['from']
+        billData['to'] = from_to['to']
         billData['records'] = table_rows[4].text.strip('\n')
         if billData['records'] == "No Records Found.":
             billData['records'] = 0
-            return billData
+            return self.formatBill(billData)
         consumer_details_soup = table_rows[1].table.find_all('tr')[3].find('td').table.find_all('tr')
         consumer_detail = {
             "customer_name": consumer_details_soup[0].find_all('td')[1].string,
@@ -142,12 +265,16 @@ class ScraperNEA:
         if trans:
             billData['bill_headers'] = bill_headers
             billData['transactions'] = transactions
-        billData['records'] = len(transactions)
+        billData['records'] = len(transactions) - 1
         bill_status = self.parseBillData(transactions)
         billData['advance'] = bill_status['advance']
         billData['unpaid'] = bill_status['unpaid']
+        if trans:
+            billData['paid'] = bill_status['paid']
+        billData['paid_up_to'] = bill_status['paid_up_to']
         billData['total_unpaid'] = bill_status['total_unpaid']
-        return billData
+        billData['total_advance'] = bill_status['total_advance']
+        return self.formatBill(billData)
 
     def getBills(self, transactions = False):
         #init Date and Session Variables
@@ -164,7 +291,7 @@ class ScraperNEA:
         bills = []
         for meter in self.meters:
             result = self.session.post(self.result_url, headers=self.headers, data=meter)
-            bill = self.parseBill(result.text, trans = transactions)
+            bill = self.parseBill(result.text, trans = transactions, name = meter['name'])
             bills.append(bill)
 
         return bills
@@ -184,8 +311,9 @@ class ScraperNEA:
             meter_data = self.domestic_meter
         else:
             meter_data = self.agri_meter
+        
         result = self.session.post(self.result_url, headers=self.headers, data=meter_data)
-        bill = self.parseBill(result.text, trans = transactions)
+        bill = self.parseBill(result.text, trans = transactions, name = meter_data['name'])
         return bill
 
     def getBillOf(self, meter, transctions = False):
@@ -199,5 +327,5 @@ class ScraperNEA:
 
         #getting bills info for each meter
         result = self.session.post(self.result_url, headers=self.headers, data=meter)
-        bill = self.parseBill(result.text, trans = transctions)
+        bill = self.parseBill(result.text, trans = transctions, name = meter['name'])
         return bill

@@ -22,7 +22,6 @@ class Meter(BaseModel):
     Fromdatepicker: str
     Todatepicker: str
 
-
 @app.get("/")
 def home():
     return {"Hello": "World from FastAPI with Railway Server"}
