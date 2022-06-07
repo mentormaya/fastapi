@@ -37,6 +37,7 @@ class Bill(BaseModel):
     paid_up_to: Optional[str]
     advance: Optional[float]
     unpaid: Optional[float]
+    due_bill_of: Optional[str]
     records: Optional[int]
 
 class ScraperNEA:
@@ -158,14 +159,15 @@ class ScraperNEA:
 
         if paid:
             paid_up_to = paid[-2]["DUE BILL OF"]
-
+        else:
+            paid_up_to = ""
         # pprint(paid_up_to)
 
         #extract advance paid amount if any
         advance = [tran for tran in tranSoup if tran["STATUS"] == "PAY ADVANCE"]
         total_advance = 0
         if advance:
-            # pprint(advance)
+            paid_up_to = advance[-2]["DUE BILL OF"]
             advance[-1]["STATUS"] = advance[0]["DUE BILL OF"]
             advance = advance[-1]
             total_advance = advance['BILL AMT']
@@ -174,9 +176,10 @@ class ScraperNEA:
         #extract unpaid transactions if any
         unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
         total_unpaid = 0
+        due_bill_of = ""
         if unpaid:
             total_unpaid = unpaid[-1]['PAYABLE AMOUNT ']
-            total_unpaid["DUE BILL OF"] = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+            due_bill_of = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
             # return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
         
         return { 
@@ -185,7 +188,8 @@ class ScraperNEA:
             "total_unpaid": total_unpaid, 
             "paid": paid, 
             "total_advance": abs(float(total_advance)), 
-            "paid_up_to": paid_up_to 
+            "paid_up_to": paid_up_to,
+            "due_bill_of": due_bill_of
         }
     
     def parseState(self, unpaid = 0, advance = 0):
@@ -223,6 +227,7 @@ class ScraperNEA:
                 paid_up_to = billData['paid_up_to'],
                 advance = billData['total_advance'],
                 unpaid = billData['total_unpaid'],
+                due_bill_of = billData['due_bill_of'],
                 records = billData['records']
             )
         else:
@@ -281,6 +286,7 @@ class ScraperNEA:
         if trans:
             billData['paid'] = bill_status['paid']
         billData['paid_up_to'] = bill_status['paid_up_to']
+        billData['due_bill_of'] = bill_status['due_bill_of']
         billData['total_unpaid'] = bill_status['total_unpaid']
         billData['total_advance'] = bill_status['total_advance']
         return self.formatBill(billData)
