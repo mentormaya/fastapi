@@ -175,7 +175,7 @@ class ScraperNEA:
             "unpaid": unpaid, 
             "total_unpaid": total_unpaid, 
             "paid": paid, 
-            "total_advance": total_advance, 
+            "total_advance": abs(float(total_advance)), 
             "paid_up_to": paid_up_to 
         }
     
