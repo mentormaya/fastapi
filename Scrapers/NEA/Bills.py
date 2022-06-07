@@ -15,11 +15,50 @@ from typing import Dict, Optional
 
 
 #some state templates
-UNPAID_MSG = "नेपाली रुपैंया {} तिर्न बांकी"
-ADVANCE_MSG = "नेपाली रुपैंया {} बढी तिरेकाे"
-UNPAID_ADVANCE_MSG = "नेपाली रुपैंया {} तिर्न बांकी र {} पुरानाे बढी तिरेकाे"
+UNPAID_MSG = "ने.रु. {} तिर्न बांकी"
+ADVANCE_MSG = "ने.रु. {} बढी तिरेकाे"
+UNPAID_ADVANCE_MSG = "ने.रु. {} तिर्न बांकी र {} पुरानाे बढी तिरेकाे"
 PAID_MSG = "सबै बिलकाे भुक्तानी भइसकेकाे छ!"
 NO_TRANSACTION_MSG = "कुनै बिल तथा काराेबार पाइएन!"
+
+
+#months list
+
+nep_months_eng = ["Baishakh", "Jestha", "Asar", "Shrawan", "Bhadau", "Ashoj", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"]
+nep_months_nep = ["बैशाख", "जेष्ठ", "असार", "श्रावन", "भदौ", "असोज", "कार्तिक", "मङ्सिर", "पौष", "माघ", "फाल्गुन", "चैत्र"]
+
+nep_numbers = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"]
+
+def eng_to_nep_month(month):
+    if not month:
+        return ""
+    mnth = nep_months_nep[nep_months_eng.index(month)]
+    return mnth
+
+def split_characters(word):
+    return [char for char in word]
+
+def join_characters(list_s):
+    word = ""
+    for item in list_s:
+        word = word + item
+    return word
+
+def nep_num(num):
+    num_rs = split_characters(str(num))
+    nep = join_characters([nep_numbers[int(lit)] for lit in num_rs])
+    return nep
+
+def get_nep_month(month):
+    index = int(month)
+    return nep_months_nep[index - 1]
+
+def parseDate(date_str):
+    if not date_str:
+        return "No Date Given!"
+    date_str = re.split("-",date_str)
+    res = get_nep_month(date_str[1]) + " " + nep_num(date_str[0])
+    return res
 
 #Data type definition for bill data
 class Bill(BaseModel):
@@ -54,9 +93,9 @@ class ScraperNEA:
     def dateCalculator(self, range = 'fiscalYear'):
         dt = datetime.datetime.now()
         if range == 'fiscalYear':
-            range_from = '01/01/2022'
+            range_from = '01/01/' + str(dt.year)
         else:
-            range_from = (dt - datetime.timedelta(days=90)).strftime("%m/%d/%Y")
+            range_from = (dt - datetime.timedelta(days=180)).strftime("%m/%d/%Y")
         return {
             "from": range_from,
             "to": dt.strftime("%m/%d/%Y")
@@ -66,7 +105,7 @@ class ScraperNEA:
         #Creating a session 
         self.session = Session()
 
-        self.dt = self.dateCalculator()
+        self.dt = self.dateCalculator(range = "last_six_months")
 
         self.domestic_meter = {
             "name": "Home NEA Bill",
@@ -150,6 +189,14 @@ class ScraperNEA:
         dates = [datetime.datetime.strptime(date, "%m/%d/%Y").strftime("%d %b %Y") for date in dates]
         return {"from": dates[0], "to": dates[1]}
 
+    def parseDue(self, due):
+        if not due:
+            return ""
+        res = re.split(", ",due)
+        res = [eng_to_nep_month(dt.split("/")[0]) + "/" + nep_num(dt.split("/")[1]) for dt in res]
+        pprint(res)
+        return ", ".join(res)
+
     def parseBillData(self, tranSoup):
         if not tranSoup:
             pprint(tranSoup)
@@ -181,21 +228,20 @@ class ScraperNEA:
             total_unpaid = unpaid[-1]['PAYABLE AMOUNT ']
             due_bill_of = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
             # return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
-        
         return { 
             "advance": advance, 
             "unpaid": unpaid, 
-            "total_unpaid": total_unpaid, 
+            "total_unpaid": abs(float(total_unpaid)), 
             "paid": paid, 
             "total_advance": abs(float(total_advance)), 
             "paid_up_to": paid_up_to,
-            "due_bill_of": due_bill_of
+            "due_bill_of": self.parseDue(due_bill_of)
         }
     
     def parseState(self, unpaid = 0, advance = 0):
         res = ''
-        unpaid = abs(float(unpaid))
-        advance = abs(float(advance))
+        unpaid = round(abs(float(unpaid)))
+        advance = round(abs(float(advance)))
         # pprint(advance)
         if unpaid > 0:
             if advance > 0:
@@ -248,6 +294,13 @@ class ScraperNEA:
 
         return bill
 
+    def parsePaidUpTo(self, paid_str):
+        res = re.search("\d+-\d+|\d+-\d+-\d+", paid_str)
+        if not res:
+            return "Not Paid!"
+        res = parseDate(res.group())
+        return res
+
     def parseBill(self, html_text, trans = False, name = "NEA Bill"):
         billData = {}
         billSoup = BeautifulSoup(html_text, 'html.parser')
@@ -285,7 +338,7 @@ class ScraperNEA:
         billData['unpaid'] = bill_status['unpaid']
         if trans:
             billData['paid'] = bill_status['paid']
-        billData['paid_up_to'] = bill_status['paid_up_to']
+        billData['paid_up_to'] = self.parsePaidUpTo(bill_status['paid_up_to'])
         billData['due_bill_of'] = bill_status['due_bill_of']
         billData['total_unpaid'] = bill_status['total_unpaid']
         billData['total_advance'] = bill_status['total_advance']
