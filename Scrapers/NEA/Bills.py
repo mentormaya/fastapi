@@ -53,7 +53,7 @@ class ScraperNEA:
     def dateCalculator(self, range = 'fiscalYear'):
         dt = datetime.datetime.now()
         if range == 'fiscalYear':
-            range_from = '02/01/2022'
+            range_from = '01/01/2022'
         else:
             range_from = (dt - datetime.timedelta(days=90)).strftime("%m/%d/%Y")
         return {
@@ -309,6 +309,10 @@ class ScraperNEA:
         bill = []
         if meter == "domestic":
             meter_data = self.domestic_meter
+        elif meter == "amita":
+            meter_data = self.amita_meter
+        elif meter == "puja":
+            meter_data = self.puja_meter
         else:
             meter_data = self.agri_meter
         
