@@ -231,17 +231,17 @@ class ScraperNEA:
         return { 
             "advance": advance, 
             "unpaid": unpaid, 
-            "total_unpaid": abs(float(total_unpaid)), 
+            "total_unpaid": round(abs(float(total_unpaid)), 2), 
             "paid": paid, 
-            "total_advance": abs(float(total_advance)), 
+            "total_advance": round(abs(float(total_advance)), 2),
             "paid_up_to": paid_up_to,
             "due_bill_of": self.parseDue(due_bill_of)
         }
     
     def parseState(self, unpaid = 0, advance = 0):
         res = ''
-        unpaid = round(abs(float(unpaid)))
-        advance = round(abs(float(advance)))
+        unpaid = round(abs(float(unpaid)), 2)
+        advance = round(abs(float(advance)), 2)
         # pprint(advance)
         if unpaid > 0:
             if advance > 0:
