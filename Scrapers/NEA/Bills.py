@@ -85,6 +85,15 @@ class ScraperNEA:
             "Todatepicker": self.dt['to']
         }
 
+        self.agri_meter_old = {
+            "name": "Agriculture NEA Bill(OLD)",
+            "NEA_Location": "334",
+            "sc_no": "001.09.701B",
+            "consumer_id": "753",
+            "Fromdatepicker": self.dt['from'],
+            "Todatepicker": self.dt['to']
+        }
+
         self.amita_meter = {
             "name": "Amita NEA Bill",
             "NEA_Location": "334",
@@ -313,6 +322,8 @@ class ScraperNEA:
             meter_data = self.amita_meter
         elif meter == "puja":
             meter_data = self.puja_meter
+        elif meter == "old":
+            meter_data = self.agri_meter_old
         else:
             meter_data = self.agri_meter
         
