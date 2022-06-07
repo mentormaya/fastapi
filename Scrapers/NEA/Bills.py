@@ -96,8 +96,8 @@ class ScraperNEA:
 
         self.amita_meter = {
             "name": "Amita NEA Bill",
-            "NEA_Location": "334",
-            "sc_no": "006.09.47KH",
+            "NEA_Location": "374",
+            "sc_no": "038.02.067",
             "consumer_id": "501003293",
             "Fromdatepicker": self.dt['from'],
             "Todatepicker": self.dt['to']
@@ -105,8 +105,8 @@ class ScraperNEA:
 
         self.puja_meter = {
             "name": "Puja NEA Bill",
-            "NEA_Location": "334",
-            "sc_no": "003.01.142KH",
+            "NEA_Location": "374",
+            "sc_no": "035.01.014",
             "consumer_id": "501005114",
             "Fromdatepicker": self.dt['from'],
             "Todatepicker": self.dt['to']
