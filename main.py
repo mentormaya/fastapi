@@ -6,7 +6,9 @@ from pydantic import BaseModel
 import uvicorn
 import random
 
+
 from Scrapers.NEA.Bills import ScraperNEA
+from Utils.Numbers.Numbers import Number
 
 app = FastAPI()
 
@@ -46,5 +48,11 @@ def get_bill_of(meter: Meter):
     bills = nea.getBillOf(meter = meter.dict())
     return bills
 
+# Utility REST API endpoint for converting any number in to nepali number
+@app.get("/utilities/v1/numbers/nep_num/{num}")
+def nepali_number(num):
+    res = Number(num = num)
+    return res.nepali()
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", default=3000)), log_level="info", reload=True)
+    uvicorn.run("main:app", host="localhost", port=int(os.getenv("PORT", default=3000)), log_level="info", reload=True)
