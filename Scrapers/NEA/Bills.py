@@ -46,7 +46,7 @@ def join_characters(list_s):
 
 def nep_num(num):
     num_rs = split_characters(str(num))
-    nep = join_characters([nep_numbers[int(lit)] for lit in num_rs])
+    nep = join_characters([nep_numbers[int(lit)] if lit != '.' else '.' for lit in num_rs])
     return nep
 
 def get_nep_month(month):
@@ -65,7 +65,7 @@ class Bill(BaseModel):
     name: str = "NEA Bill"
     description: Optional[str]
     raw_data: dict
-    state: str = "UNKNOWN"
+    state: Optional[str]
     status: Optional[str]
     consumer_name: Optional[str]
     sc_no: Optional[str]
@@ -78,6 +78,9 @@ class Bill(BaseModel):
     unpaid: Optional[float]
     due_bill_of: Optional[str]
     records: Optional[int]
+    consumed_units: Optional[float]
+    rebate: Optional[str]
+    rate: Optional[float]
 
 class ScraperNEA:
     
@@ -194,8 +197,16 @@ class ScraperNEA:
             return ""
         res = re.split(", ",due)
         res = [eng_to_nep_month(dt.split("/")[0]) + "/" + nep_num(dt.split("/")[1]) for dt in res]
-        pprint(res)
         return ", ".join(res)
+
+    def getConsumedUnits(self, unpaid):
+        units = 0
+        if unpaid:
+            for month in unpaid:
+                if month["CONSUMED UNITS "] is not None:
+                   units = units + float(month["CONSUMED UNITS "])
+        # pprint(units)
+        return units
 
     def parseBillData(self, tranSoup):
         if not tranSoup:
@@ -224,9 +235,15 @@ class ScraperNEA:
         unpaid = [tran for tran in tranSoup if tran["STATUS"] == "UN-PAID"]
         total_unpaid = 0
         due_bill_of = ""
+        consumed_units = 0
+        rate = 0
+        rebate = ''
         if unpaid:
             total_unpaid = unpaid[-1]['PAYABLE AMOUNT ']
             due_bill_of = ", ".join([str(month["DUE BILL OF"]) for month in unpaid if month["DUE BILL OF"] != None])
+            consumed_units = self.getConsumedUnits(unpaid)
+            rebate = unpaid[0]['REBATE']
+            rate = unpaid[0]['RATE']
             # return {"advance": advance, "unpaid": unpaid, "total_unpaid": total_unpaid}
         return { 
             "advance": advance, 
@@ -235,7 +252,10 @@ class ScraperNEA:
             "paid": paid, 
             "total_advance": round(abs(float(total_advance)), 2),
             "paid_up_to": paid_up_to,
-            "due_bill_of": self.parseDue(due_bill_of)
+            "due_bill_of": self.parseDue(due_bill_of),
+            "consumed_units": consumed_units,
+            "rate": rate,
+            "rebate": rebate
         }
     
     def parseState(self, unpaid = 0, advance = 0):
@@ -245,12 +265,12 @@ class ScraperNEA:
         # pprint(advance)
         if unpaid > 0:
             if advance > 0:
-                res = UNPAID_ADVANCE_MSG.format(unpaid, advance)
+                res = UNPAID_ADVANCE_MSG.format(nep_num(unpaid), nep_num(advance))
             else:
-                res = UNPAID_MSG.format(unpaid)
+                res = UNPAID_MSG.format(nep_num(unpaid))
         else:
             if advance > 0:
-                res = ADVANCE_MSG.format(advance)
+                res = ADVANCE_MSG.format(nep_num(advance))
             else:
                 res = PAID_MSG
         # pprint(res)
@@ -274,7 +294,10 @@ class ScraperNEA:
                 advance = billData['total_advance'],
                 unpaid = billData['total_unpaid'],
                 due_bill_of = billData['due_bill_of'],
-                records = billData['records']
+                records = billData['records'],
+                consumed_units = billData['consumed_units'],
+                rebate = billData['rebate'],
+                rate = billData['rate']
             )
         else:
             bill = Bill(
@@ -342,6 +365,9 @@ class ScraperNEA:
         billData['due_bill_of'] = bill_status['due_bill_of']
         billData['total_unpaid'] = bill_status['total_unpaid']
         billData['total_advance'] = bill_status['total_advance']
+        billData['consumed_units'] = bill_status['consumed_units']
+        billData['rebate'] = bill_status['rebate']
+        billData['rate'] = bill_status['rate']
         return self.formatBill(billData)
 
     def getBills(self, transactions = False):
