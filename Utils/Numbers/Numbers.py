@@ -17,7 +17,7 @@ NUM_TO_WORDS_NEP_POST = " मात्र"
 NO_NUMBER_NEP = "कुनै नम्बर भेटिएन!"
 NO_NUMBER_ENG = 'No Number Found!'
 HUNDRED_ENG = "Hundred"
-HUNDRED_NEP = " सय "
+HUNDRED_NEP = "सय "
 RUPEES_ENG = " Rupees"
 RUPEES_NEP = " रूपैयाँ"
 PAISA_ENG = " paisa"
@@ -76,14 +76,14 @@ class Number():
         if hundred != '':
             if int(hundred) > 1:
                 if nep:
-                    res = res + NEPALI_ANKA_ONES[int(hundred)] + HUNDRED_NEP
+                    res = res + NEPALI_ANKA_ONES[int(hundred)] + " " + HUNDRED_NEP
                 else:
-                    res = res + ONES_PLACES[int(hundred)] + HUNDRED_ENG + "s"
+                    res = res + ONES_PLACES[int(hundred)] + " " + HUNDRED_ENG + "s"
             else:
                 if nep:
-                    res = res + NEPALI_ANKA_ONES[int(hundred)] + HUNDRED_NEP
+                    res = res + NEPALI_ANKA_ONES[int(hundred)] + " " + HUNDRED_NEP
                 else:
-                    res = res + ONES_PLACES[int(hundred)] + HUNDRED_ENG
+                    res = res + ONES_PLACES[int(hundred)] + " " + HUNDRED_ENG
         if tens != '' and not nep:
             res = res + " " + TENS_PLACES[int(tens)]
         if ones != '':
