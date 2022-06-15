@@ -20,7 +20,7 @@ HUNDRED_ENG = " Hundred"
 HUNDRED_NEP = " सय "
 RUPEES_ENG = " Rupees"
 RUPEES_NEP = " रूपैयाँ"
-PAISA_ENG = " paisa"
+PAISA_ENG = " Paisa"
 PAISA_NEP = " पैसा"
 
 class Number():
