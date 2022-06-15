@@ -12,3 +12,8 @@ class Utils:
                 word = word + seprator + item
             return word
         return list_s
+    
+    def string_reverse(string = ""):
+        if string == "":
+            return string
+        return string[::-1]
