@@ -7,11 +7,14 @@ import uvicorn
 
 
 from Scrapers.NEA.Bills import ScraperNEA
+from Scrapers.PAN.Pan import PANDetails
 from Utils.Numbers.Numbers import Number
 
 app = FastAPI()
 
 nea = ScraperNEA()
+
+pan = PANDetails()
 
 
 class Meter(BaseModel):
@@ -36,16 +39,20 @@ def get_bills():
 # get electricity bills for domestic/agri meter with parameter in url
 @app.get("/nea/v1/{meter}")
 def get_bill(meter: Optional[str]):
-    nea = ScraperNEA()
     bills = nea.getBill(meter = meter)
     return bills
 
 # get electricity bills for domestic/agri meter with parameter in url
 @app.post("/nea/v1/bill")
 def get_bill_of(meter: Meter):
-    nea = ScraperNEA()
     bills = nea.getBillOf(meter = meter.dict())
     return bills
+
+# get details of the PAN information with parameter in url
+@app.get("/pan/v1/{pan_no}")
+def get_pan_details(pan_no: int):
+    details = pan.getDetails(pan_no)
+    return details
 
 # Utility REST API endpoint for converting any number in to nepali number
 @app.get("/utilities/v1/numbers/nep_num/{num}")
