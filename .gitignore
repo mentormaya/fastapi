@@ -129,8 +129,4 @@ dmypy.json
 .pyre/
 
 # vscode config folder
-<<<<<<< HEAD
 .vscode
-=======
-.vscode
->>>>>>> d9b2bff3c4c8624d6a105430f69e8eb5d6b61fa3
