@@ -24,8 +24,8 @@ NO_TRANSACTION_MSG = "कुनै बिल तथा काराेबार 
 
 #months list
 
-nep_months_eng = ["Baishakh", "Jestha", "Asar", "Shrawan", "Bhadau", "Ashoj", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"]
-nep_months_nep = ["बैशाख", "जेष्ठ", "असार", "श्रावन", "भदौ", "असोज", "कार्तिक", "मङ्सिर", "पौष", "माघ", "फाल्गुन", "चैत्र"]
+nep_months_eng = ["Baishakh", "Jestha", "Ashad", "Shrawan", "Bhadau", "Ashoj", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra", "ARREARS"]
+nep_months_nep = ["बैशाख", "जेष्ठ", "असार", "श्रावन", "भदौ", "असोज", "कार्तिक", "मङ्सिर", "पौष", "माघ", "फाल्गुन", "चैत्र", "बक्याैता"]
 
 nep_numbers = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"]
 
@@ -196,7 +196,7 @@ class ScraperNEA:
         if not due:
             return ""
         res = re.split(", ",due)
-        res = [eng_to_nep_month(dt.split("/")[0]) + "/" + nep_num(dt.split("/")[1]) for dt in res]
+        res = [eng_to_nep_month(dt.split("/")[0]) + "/" + nep_num(dt.split("/")[1]) if len(dt.split("/")) > 1 else eng_to_nep_month(dt.split("/")[0]) for dt in res]
         return ", ".join(res)
 
     def getConsumedUnits(self, unpaid):
