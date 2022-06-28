@@ -14,6 +14,9 @@ from typing import Dict, Optional
 
 _exp_regex = "\d+[+|/|*|-]\d+"
 
+OKAY = 'OK'
+NOT_OKAY = 'NOT_FOUND'
+
 class PANDetailsData(BaseModel):
     name: str = "PAN Details"
     description: Optional[str]
@@ -48,8 +51,14 @@ class PANDetails():
         return True
     
     def format(self, details):
+        if details == 0:
+            return PANDetailsData(
+                raw_data = {},
+                status = NOT_OKAY
+            )
         return PANDetailsData(
-            raw_data = details
+            raw_data = details,
+            status = OKAY
         )
     
     def getDetails(self, pan_no):

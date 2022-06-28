@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Testing</title>
+</head>
+<body>
+    <div class="container">
+        <h1> API Testing</h1>
+        <p>Result here</p>
+    </div>
+    <script>
+        const api_url_prod = "https://fastapi-production-c751.up.railway.app/pan/v1/"
+        const api_url_local = "http://localhost:3000/pan/v1/"
+        const pan_no = 300073250
+
+        fetch(api_url_local+pan_no).then(response => response.json()).then(details => console.log(details))
+    </script>
+</body>
+</html>

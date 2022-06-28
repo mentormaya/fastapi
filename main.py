@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 
+from fastapi.middleware.cors import CORSMiddleware
 
 from Scrapers.NEA.Bills import ScraperNEA
 from Scrapers.PAN.Pan import PANDetails
@@ -16,6 +17,24 @@ nea = ScraperNEA()
 
 pan = PANDetails()
 
+origin = '*'
+origins = [
+    "null",
+    "http://localhost:3000",
+    "http://jnpserver.nrb.org.np",
+    "https://jnpserver.nrb.org.np",
+    "https://ajaysingh.com.np",
+    "https://home.ajaysingh.com.np",
+    "https://jnpserver.ajaysingh.com.np",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origin,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class Meter(BaseModel):
     name: str
